@@ -1,4 +1,4 @@
-use crate::operand::{Operand, OperandParseError};
+use crate::parser::operand::{Operand, OperandParseError};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

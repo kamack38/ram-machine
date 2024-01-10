@@ -1,13 +1,10 @@
 use std::fs;
 
-use crate::parser::Parser;
+use crate::parser::parser::{Parser, ParserError};
 
-mod instruction;
-mod operand;
 mod parser;
-mod ram_code;
 
-fn main() -> Result<(), parser::ParserError> {
+fn main() -> Result<(), ParserError> {
     let unparsed_file = fs::read_to_string("code.ram").unwrap();
     // let unparsed_file = "store";
     let parser = Parser::new();

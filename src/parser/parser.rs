@@ -1,5 +1,5 @@
-use crate::instruction::{Instruction, InstructionParseError};
-use crate::ram_code::RAMCode;
+use crate::parser::instruction::{Instruction, InstructionParseError};
+use crate::parser::ram_code::RAMCode;
 use thiserror::Error;
 
 pub struct Parser {}

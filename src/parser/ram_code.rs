@@ -1,4 +1,4 @@
-use crate::instruction::Instruction;
+use crate::parser::instruction::Instruction;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq)]
