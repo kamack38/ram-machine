@@ -1,8 +1,7 @@
-#read  1 #idk
-read  2
-load  2
-mult  2
-store 3
-#div   3
-#load  1
+read  1
+load  1
+mult  1
+write 0
+div   =2
+store 2
 write 2

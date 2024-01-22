@@ -1,9 +1,6 @@
-use std::num::TryFromIntError;
-
 use crate::parser::{
     instruction::Instruction,
-    operand::CellAddress,
-    operand::{CellOperand, Operand},
+    operand::{CellOperand, ExpandError, Operand},
     ram_code::RamCode,
 };
 use thiserror::Error;
@@ -11,6 +8,8 @@ use thiserror::Error;
 #[derive(Debug, PartialEq, Eq)]
 pub struct RamMachine {
     code: RamCode,
+    // TODO: Change to Vec<Option<i32>>, because it should'nt be assumed that each value is 0 by
+    // default
     tape: Vec<i32>,
     pointer: usize,
     input: Vec<i32>,
@@ -21,11 +20,9 @@ pub struct RamMachine {
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum RamMachineError {
     #[error(transparent)]
-    CellAccessError(#[from] CellAccessError),
+    ExpandError(#[from] ExpandError),
     #[error(transparent)]
     InputAccessError(#[from] InputAccessError),
-    #[error(transparent)]
-    ConvertError(#[from] TryFromIntError),
     #[error(transparent)]
     JumpError(#[from] JumpError),
     #[error("Addition of `{0}` failed.")]
@@ -37,14 +34,6 @@ pub enum RamMachineError {
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum CellAccessError {
-    #[error("Cell {0} does not exist or its value wasn't set.")]
-    NotExistentCell(usize),
-    #[error(transparent)]
-    ConvertError(#[from] TryFromIntError),
-}
-
-#[derive(Error, Debug, PartialEq, Eq)]
 pub enum InputAccessError {
     #[error("Input at index `{0}` not found.")]
     NotExistentInput(usize),
@@ -52,7 +41,7 @@ pub enum InputAccessError {
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum JumpError {
-    #[error("")]
+    #[error("Label `{0}` could not be found in Ram code.")]
     LabelNotFound(String),
 }
 
@@ -66,7 +55,7 @@ impl RamMachine {
     pub fn new(code: RamCode, input: Vec<i32>) -> Self {
         RamMachine {
             code,
-            tape: vec![0, 0, 0, 0, 0, 0],
+            tape: vec![0],
             pointer: 0,
             input_pointer: 0,
             input,
@@ -88,41 +77,6 @@ impl RamMachine {
     //     todo!()
     // }
 
-    fn access_cell(&self, cell: &CellAddress) -> Result<i32, CellAccessError> {
-        self.tape
-            .get(*cell)
-            .ok_or(CellAccessError::NotExistentCell(*cell))
-            .copied()
-    }
-
-    fn access(&self, operand: &Operand) -> Result<i32, CellAccessError> {
-        use Operand::*;
-        match operand {
-            Number(v) => Ok(*v),
-            ValueInCell(cell) => Ok(self.access_cell(cell)?),
-            ValueOfValueInCell(cell) => {
-                Ok(self.access_cell(&usize::try_from(self.access_cell(cell)?)?)?)
-            }
-        }
-    }
-
-    fn get_cell(&mut self, cell_operand: &CellOperand) -> Result<&mut i32, CellAccessError> {
-        use CellOperand::*;
-        match cell_operand {
-            AddressOfCell(cell) => self
-                .tape
-                .get_mut(*cell)
-                .ok_or(CellAccessError::NotExistentCell(*cell)),
-            AddressOfCellInCell(cell) => {
-                let real_cell = self
-                    .tape
-                    .get(*cell)
-                    .ok_or(CellAccessError::NotExistentCell(*cell))?;
-                self.get_cell(&CellOperand::AddressOfCell(usize::try_from(*real_cell)?))
-            }
-        }
-    }
-
     fn jump_to(&mut self, label: &str) -> Result<RunState, JumpError> {
         match self
             .code
@@ -139,14 +93,6 @@ impl RamMachine {
             }
             Err(e) => Err(e),
         }
-    }
-
-    fn buffer_value(&self) -> i32 {
-        self.tape[0]
-    }
-
-    fn buffer(&mut self) -> &mut i32 {
-        self.tape.get_mut(0).unwrap()
     }
 
     fn get_input(&mut self) -> Result<&i32, InputAccessError> {
@@ -166,55 +112,80 @@ impl RamMachine {
         RunState::Halted
     }
 
+    fn get(&self, operand: &Operand) -> Result<i32, ExpandError> {
+        Ok(*operand.expand(&self.tape)?)
+    }
+
+    fn set(&mut self, cell_operand: &CellOperand, value: i32) -> Result<(), ExpandError> {
+        let index = cell_operand.expand(&self.tape)?;
+        self.tape.resize(index + 1, 0);
+        *self.tape.get_mut(index).expect("Tape was just resized") = value;
+        Ok(())
+    }
+
+    fn buffer(&self) -> &i32 {
+        self.tape
+            .first()
+            .expect("Tape was initialized with length 1")
+    }
+
+    fn buffer_mut(&mut self) -> &mut i32 {
+        self.tape
+            .get_mut(0)
+            .expect("Tape was initialized with length 1")
+    }
+
     pub fn execute(&mut self, instruction: &Instruction) -> Result<RunState, RamMachineError> {
         use Instruction::*;
         match instruction {
             Load(o) => {
-                self.tape[0] = self.access(o)?;
+                *self.buffer_mut() = self.get(o)?;
                 Ok(self.advance_pointer())
             }
             Store(o) => {
-                *self.get_cell(o)? = self.buffer_value();
+                self.set(o, *self.buffer())?;
                 Ok(self.advance_pointer())
             }
             Add(o) => {
-                *self.buffer() = self.tape[0]
-                    .checked_add(self.access(o)?)
-                    .ok_or(RamMachineError::AdditionFailed(self.access(o)?))?;
+                *self.buffer_mut() = self
+                    .buffer()
+                    .checked_add(self.get(o)?)
+                    .ok_or(RamMachineError::AdditionFailed(self.get(o)?))?;
                 Ok(self.advance_pointer())
             }
             Mult(o) => {
-                *self.buffer() = self
-                    .buffer_value()
-                    .checked_mul(self.access(o)?)
-                    .ok_or(RamMachineError::MultiplicationFailed(self.access(o)?))?;
+                *self.buffer_mut() = self
+                    .buffer()
+                    .checked_mul(self.get(o)?)
+                    .ok_or(RamMachineError::MultiplicationFailed(self.get(o)?))?;
                 Ok(self.advance_pointer())
             }
             Div(o) => {
-                *self.buffer() = self
-                    .buffer_value()
-                    .checked_div(self.access(o)?)
-                    .ok_or(RamMachineError::DivisionFailed(self.access(o)?))?;
+                *self.buffer_mut() = self
+                    .buffer()
+                    .checked_div(self.get(o)?)
+                    .ok_or(RamMachineError::DivisionFailed(self.get(o)?))?;
                 Ok(self.advance_pointer())
             }
             Read(o) => {
-                *self.get_cell(o)? = *self.get_input()?;
+                let input = *self.get_input()?;
+                self.set(o, input)?;
                 Ok(self.advance_pointer())
             }
             Write(o) => {
-                self.output.push(self.access(o)?);
+                self.output.push(self.get(o)?);
                 Ok(self.advance_pointer())
             }
             Jump(s) => Ok(self.jump_to(s)?),
             Jgtz(s) => {
-                if self.tape[0] > 0 {
+                if *self.buffer() > 0 {
                     self.jump_to(s)?;
                     return Ok(RunState::Running);
                 }
                 Ok(self.advance_pointer())
             }
             Jzero(s) => {
-                if self.tape[0] == 0 {
+                if *self.buffer() == 0 {
                     self.jump_to(s)?;
                     Ok(RunState::Running)
                 } else {

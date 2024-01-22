@@ -24,6 +24,56 @@ pub enum CellOperand {
     AddressOfCellInCell(CellAddress),
 }
 
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum ExpandError {
+    #[error("Cell {0} does not exist or its value wasn't set.")]
+    NotExistentCell(usize),
+    #[error("Value `{0}` in cell `{1}` could not be converted to a tape index.")]
+    ConvertError(i32, usize),
+    // #[error("Tried reading from cell with address `{0}`, which wasn't set.")]
+    // ValueNotSet(usize),
+}
+
+impl Operand {
+    pub fn expand<'a>(&'a self, tape: &'a [i32]) -> Result<&'a i32, ExpandError> {
+        use Operand::*;
+        match self {
+            Number(v) => Ok(v),
+            ValueInCell(cell) => tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell)),
+            ValueOfValueInCell(cell) => tape
+                .get(
+                    CellAddress::try_from(
+                        *tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?,
+                    )
+                    .or(Err(ExpandError::ConvertError(
+                        *tape.get(*cell).expect("Would've failed before"),
+                        *cell,
+                    )))?,
+                )
+                .ok_or(ExpandError::NotExistentCell(
+                    CellAddress::try_from(*tape.get(*cell).expect("Would've failed before"))
+                        .expect("Would've failed before"),
+                )),
+        }
+    }
+}
+
+impl CellOperand {
+    pub fn expand(&self, tape: &[i32]) -> Result<CellAddress, ExpandError> {
+        use CellOperand::*;
+        match self {
+            AddressOfCell(cell) => Ok(*cell),
+            AddressOfCellInCell(cell) => {
+                CellAddress::try_from(*tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?)
+                    .or(Err(ExpandError::ConvertError(
+                        *tape.get(*cell).expect("Didn't fail previously"),
+                        *cell,
+                    )))
+            }
+        }
+    }
+}
+
 macro_rules! parse {
     ($e:expr) => {
         $e.parse().expect("Already checked if can be parsed")

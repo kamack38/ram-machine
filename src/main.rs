@@ -43,7 +43,10 @@ fn main() -> Result<(), RuntimeError> {
     let interpreter = RamMachine::new(code, input);
     match interpreter.run() {
         Ok(v) => println!("{:?}", v),
-        Err(e) => println!("{}", e),
+        Err(e) => {
+            println!("{}", e);
+            exit(1);
+        }
     }
     Ok(())
 }
