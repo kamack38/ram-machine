@@ -1,6 +1,6 @@
-mod instruction;
-mod operand;
+pub mod instruction;
+pub mod operand;
 pub mod parser;
-mod ram_code;
+pub mod ram_code;
 
-// use crate::parser::*;
+pub use crate::parser::parser::*;

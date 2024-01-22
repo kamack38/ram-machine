@@ -2,14 +2,14 @@ use crate::parser::instruction::Instruction;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct RAMCode {
+pub struct RamCode {
     pub instructions: Vec<Instruction>,
-    pub jump_table: HashMap<String, u32>,
+    pub jump_table: HashMap<String, usize>,
 }
 
-impl RAMCode {
-    pub fn new() -> RAMCode {
-        RAMCode {
+impl RamCode {
+    pub fn new() -> RamCode {
+        RamCode {
             instructions: Vec::new(),
             jump_table: HashMap::new(),
         }

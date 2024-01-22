@@ -1,8 +1,0 @@
-read  1 #idk
-read  2
-load  2
-mult  2
-store 3
-load  1
-div   3
-write 0

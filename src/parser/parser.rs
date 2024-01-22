@@ -1,5 +1,5 @@
-use crate::parser::instruction::{Instruction, InstructionParseError};
-use crate::parser::ram_code::RAMCode;
+use super::instruction::{Instruction, InstructionParseError};
+use super::ram_code::RamCode;
 use thiserror::Error;
 
 pub struct Parser {}
@@ -27,8 +27,8 @@ impl Parser {
         Parser {}
     }
 
-    pub fn parse(self, string: &str) -> Result<RAMCode, ParserError> {
-        let mut code = RAMCode::new();
+    pub fn parse(self, string: &str) -> Result<RamCode, ParserError> {
+        let mut code = RamCode::new();
         let lines = string.lines().filter(|s| !s.is_empty());
         for line in lines {
             self.parse_line(line, &mut code)?;
@@ -36,7 +36,7 @@ impl Parser {
         Ok(code)
     }
 
-    pub fn parse_line(&self, line: &str, code: &mut RAMCode) -> Result<(), ParserError> {
+    pub fn parse_line(&self, line: &str, code: &mut RamCode) -> Result<(), ParserError> {
         let mut slices = line.split(' ').filter(|s| !s.is_empty());
 
         let mut slice = match slices.next() {
@@ -49,7 +49,7 @@ impl Parser {
         if slice.ends_with(Self::LABEL_END) {
             code.jump_table.insert(
                 slice.trim_end_matches(':').to_owned(),
-                u32::try_from(code.instructions.len()).unwrap(),
+                code.instructions.len(),
             );
 
             slice = match slices.next() {
@@ -67,9 +67,9 @@ impl Parser {
 
         let rest = slices.next();
 
-        if rest.is_some() {
-            return_if_comment!(rest.expect("Tested if is some"));
-            return Err(ParserError::UnexpectedArgument(rest.unwrap().to_string()));
+        if let Some(v) = rest {
+            return_if_comment!(v);
+            return Err(ParserError::UnexpectedArgument(v.to_string()));
         }
 
         Ok(())
@@ -79,8 +79,10 @@ impl Parser {
 #[cfg(test)]
 mod parser_tests {
     use super::*;
-    use crate::operand::Operand;
+    use crate::parser::operand::{CellOperand, Operand};
     use std::collections::HashMap;
+    use CellOperand::AddressOfCell as AC;
+    use CellOperand::AddressOfCellInCell as AOC;
     use Instruction::Add as A;
     use Instruction::Div as D;
     use Instruction::Halt as H;
@@ -110,7 +112,7 @@ halt: halt
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
+        let expected_code = RamCode {
             instructions: vec![
                 L(Num(10)),
                 W(VC(0)),
@@ -143,14 +145,14 @@ halt
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
+        let expected_code = RamCode {
             instructions: vec![
-                R(VC(1)),
+                R(AC(1)),
                 L(VC(1)),
                 A(Num(-1)),
-                S(VC(1)),
+                S(AC(1)),
                 A(Num(3)),
-                R(VOC(0)),
+                R(AOC(0)),
                 L(VC(1)),
                 Jgtz(String::from("label")),
                 H,
@@ -172,8 +174,8 @@ div =-5
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
-            instructions: vec![L(Num(-3)), R(VC(1)), A(VC(1)), M(Num(-2)), D(Num(-5))],
+        let expected_code = RamCode {
+            instructions: vec![L(Num(-3)), R(AC(1)), A(VC(1)), M(Num(-2)), D(Num(-5))],
             jump_table: HashMap::new(),
         };
         assert_eq!(parser.parse(&code), Ok(expected_code));
@@ -193,11 +195,11 @@ halt
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
+        let expected_code = RamCode {
             instructions: vec![
-                R(VC(1)),
+                R(AC(1)),
                 L(VC(3)),
-                S(VOC(4)),
+                S(AOC(4)),
                 W(VC(3)),
                 M(Num(2)),
                 D(VOC(4)),
@@ -220,8 +222,8 @@ add =5
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
-            instructions: vec![R(VC(1)), L(VC(1)), M(Num(2)), A(Num(5))],
+        let expected_code = RamCode {
+            instructions: vec![R(AC(1)), L(VC(1)), M(Num(2)), A(Num(5))],
             jump_table: HashMap::new(),
         };
         assert_eq!(parser.parse(&code), Ok(expected_code));
@@ -234,7 +236,7 @@ add =5
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
+        let expected_code = RamCode {
             instructions: vec![],
             jump_table: HashMap::from([(label.to_owned(), 0)]),
         };
@@ -269,8 +271,8 @@ Load =4
 
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
-            instructions: vec![L(Num(4)), S(VC(3))],
+        let expected_code = RamCode {
+            instructions: vec![L(Num(4)), S(AC(3))],
             jump_table: HashMap::from([(label.to_owned(), 1)]),
         };
         assert_eq!(parser.parse(&code), Ok(expected_code));
@@ -283,7 +285,7 @@ lOaD 1
 ";
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
+        let expected_code = RamCode {
             instructions: vec![L(VC(1))],
             jump_table: HashMap::new(),
         };
@@ -315,8 +317,8 @@ store 1
 ";
         let parser = Parser::new();
 
-        let expected_code = RAMCode {
-            instructions: vec![R(VC(1)), L(VC(1)), A(Num(3)), S(VC(1))],
+        let expected_code = RamCode {
+            instructions: vec![R(AC(1)), L(VC(1)), A(Num(3)), S(AC(1))],
             jump_table: HashMap::new(),
         };
 
