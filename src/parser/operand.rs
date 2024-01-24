@@ -35,27 +35,35 @@ pub enum ExpandError {
 }
 
 impl Operand {
-    pub fn expand<'a>(&'a self, tape: &'a [i32]) -> Result<&'a i32, ExpandError> {
+    pub fn expand<'a>(&'a self, tape: &'a [Option<i32>]) -> Result<&'a i32, ExpandError> {
         use Operand::*;
         match self {
             Number(v) => Ok(v),
-            ValueInCell(cell) => tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell)),
+            ValueInCell(cell) => Ok(tape
+                .get(*cell)
+                .and_then(|val| val.as_ref())
+                .ok_or(ExpandError::NotExistentCell(*cell))?),
             ValueOfValueInCell(cell) => tape
                 .get(
                     CellAddress::try_from(
-                        *tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?,
+                        tape.get(*cell)
+                            .ok_or(ExpandError::NotExistentCell(*cell))?
+                            .ok_or(ExpandError::NotExistentCell(*cell))?,
                     )
                     .map_err(|_| {
                         ExpandError::ConvertError(
-                            *tape.get(*cell).expect("Would've failed before"),
+                            tape.get(*cell).expect("Would've failed before").unwrap(),
                             *cell,
                         )
                     })?,
                 )
+                .and_then(|val| val.as_ref())
                 .ok_or_else(|| {
                     ExpandError::NotExistentCell(
-                        CellAddress::try_from(*tape.get(*cell).expect("Would've failed before"))
-                            .expect("Would've failed before"),
+                        CellAddress::try_from(
+                            tape.get(*cell).expect("Would've failed before").unwrap(),
+                        )
+                        .expect("Would've failed before"),
                     )
                 }),
         }
@@ -63,19 +71,21 @@ impl Operand {
 }
 
 impl CellOperand {
-    pub fn expand(&self, tape: &[i32]) -> Result<CellAddress, ExpandError> {
+    pub fn expand(&self, tape: &[Option<i32>]) -> Result<CellAddress, ExpandError> {
         use CellOperand::*;
         match self {
             AddressOfCell(cell) => Ok(*cell),
-            AddressOfCellInCell(cell) => {
-                CellAddress::try_from(*tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?)
-                    .map_err(|_| {
-                        ExpandError::ConvertError(
-                            *tape.get(*cell).expect("Didn't fail previously"),
-                            *cell,
-                        )
-                    })
-            }
+            AddressOfCellInCell(cell) => CellAddress::try_from(
+                tape.get(*cell)
+                    .ok_or(ExpandError::NotExistentCell(*cell))?
+                    .ok_or(ExpandError::NotExistentCell(*cell))?,
+            )
+            .map_err(|_| {
+                ExpandError::ConvertError(
+                    tape.get(*cell).expect("Didn't fail previously").unwrap(),
+                    *cell,
+                )
+            }),
         }
     }
 }

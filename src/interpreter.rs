@@ -8,9 +8,7 @@ use thiserror::Error;
 #[derive(Debug, PartialEq, Eq)]
 pub struct RamMachine {
     code: RamCode,
-    // TODO: Change to Vec<Option<i32>>, because it should'nt be assumed that each value is 0 by
-    // default
-    tape: Vec<i32>,
+    tape: Vec<Option<i32>>,
     pointer: usize,
     input: Vec<i32>,
     input_pointer: usize,
@@ -18,9 +16,15 @@ pub struct RamMachine {
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
+#[error("Buffer could not be accessed, because its value was never set.")]
+pub struct BufferError;
+
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum RamMachineError {
     #[error(transparent)]
     ExpandError(#[from] ExpandError),
+    #[error(transparent)]
+    BufferError(#[from] BufferError),
     #[error(transparent)]
     InputAccessError(#[from] InputAccessError),
     #[error(transparent)]
@@ -55,7 +59,7 @@ impl RamMachine {
     pub fn new(code: RamCode, input: Vec<i32>) -> Self {
         RamMachine {
             code,
-            tape: vec![0],
+            tape: vec![None],
             pointer: 0,
             input_pointer: 0,
             input,
@@ -119,19 +123,20 @@ impl RamMachine {
     fn set(&mut self, cell_operand: &CellOperand, value: i32) -> Result<(), ExpandError> {
         let index = cell_operand.expand(&self.tape)?;
         if self.tape.len() < index + 1 {
-            self.tape.resize(index + 1, 0);
+            self.tape.resize(index + 1, None);
         }
-        *self.tape.get_mut(index).expect("Tape was just resized") = value;
+        *self.tape.get_mut(index).expect("Tape was just resized") = Some(value);
         Ok(())
     }
 
-    fn buffer(&self) -> &i32 {
+    fn buffer(&self) -> Result<&i32, BufferError> {
         self.tape
             .first()
-            .expect("Tape was initialized with length 1")
+            .and_then(|val| val.as_ref())
+            .ok_or(BufferError)
     }
 
-    fn buffer_mut(&mut self) -> &mut i32 {
+    fn buffer_mut(&mut self) -> &mut Option<i32> {
         self.tape
             .get_mut(0)
             .expect("Tape was initialized with length 1")
@@ -141,32 +146,35 @@ impl RamMachine {
         use Instruction::*;
         match instruction {
             Load(o) => {
-                *self.buffer_mut() = self.get(o)?;
+                *self.buffer_mut() = Some(self.get(o)?);
                 Ok(self.advance_pointer())
             }
             Store(o) => {
-                self.set(o, *self.buffer())?;
+                self.set(o, *self.buffer()?)?;
                 Ok(self.advance_pointer())
             }
             Add(o) => {
-                *self.buffer_mut() = self
-                    .buffer()
-                    .checked_add(self.get(o)?)
-                    .ok_or(RamMachineError::AdditionFailed(self.get(o)?))?;
+                *self.buffer_mut() = Some(
+                    self.buffer()?
+                        .checked_add(self.get(o)?)
+                        .ok_or(RamMachineError::AdditionFailed(self.get(o)?))?,
+                );
                 Ok(self.advance_pointer())
             }
             Mult(o) => {
-                *self.buffer_mut() = self
-                    .buffer()
-                    .checked_mul(self.get(o)?)
-                    .ok_or(RamMachineError::MultiplicationFailed(self.get(o)?))?;
+                *self.buffer_mut() = Some(
+                    self.buffer()?
+                        .checked_mul(self.get(o)?)
+                        .ok_or(RamMachineError::MultiplicationFailed(self.get(o)?))?,
+                );
                 Ok(self.advance_pointer())
             }
             Div(o) => {
-                *self.buffer_mut() = self
-                    .buffer()
-                    .checked_div(self.get(o)?)
-                    .ok_or(RamMachineError::DivisionFailed(self.get(o)?))?;
+                *self.buffer_mut() = Some(
+                    self.buffer()?
+                        .checked_div(self.get(o)?)
+                        .ok_or(RamMachineError::DivisionFailed(self.get(o)?))?,
+                );
                 Ok(self.advance_pointer())
             }
             Read(o) => {
@@ -180,14 +188,14 @@ impl RamMachine {
             }
             Jump(s) => Ok(self.jump_to(s)?),
             Jgtz(s) => {
-                if *self.buffer() > 0 {
+                if *self.buffer()? > 0 {
                     self.jump_to(s)?;
                     return Ok(RunState::Running);
                 }
                 Ok(self.advance_pointer())
             }
             Jzero(s) => {
-                if *self.buffer() == 0 {
+                if *self.buffer()? == 0 {
                     self.jump_to(s)?;
                     Ok(RunState::Running)
                 } else {
