@@ -27,7 +27,7 @@ fn main() -> Result<(), RuntimeError> {
     if args.len() < 2 {
         return Err(RuntimeError::NotEnoughArgs);
     }
-    let mut input: Vec<i32> = Vec::new();
+    let mut input: Vec<i64> = Vec::new();
     for arg in &args[2..] {
         input.push(arg.parse()?);
     }

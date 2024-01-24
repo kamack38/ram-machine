@@ -2,7 +2,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 pub type CellAddress = usize;
-pub type CellValue = i32;
+pub type CellValue = i64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operand {
