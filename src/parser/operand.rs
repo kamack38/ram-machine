@@ -45,15 +45,19 @@ impl Operand {
                     CellAddress::try_from(
                         *tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?,
                     )
-                    .or(Err(ExpandError::ConvertError(
-                        *tape.get(*cell).expect("Would've failed before"),
-                        *cell,
-                    )))?,
+                    .map_err(|_| {
+                        ExpandError::ConvertError(
+                            *tape.get(*cell).expect("Would've failed before"),
+                            *cell,
+                        )
+                    })?,
                 )
-                .ok_or(ExpandError::NotExistentCell(
-                    CellAddress::try_from(*tape.get(*cell).expect("Would've failed before"))
-                        .expect("Would've failed before"),
-                )),
+                .ok_or_else(|| {
+                    ExpandError::NotExistentCell(
+                        CellAddress::try_from(*tape.get(*cell).expect("Would've failed before"))
+                            .expect("Would've failed before"),
+                    )
+                }),
         }
     }
 }
@@ -65,10 +69,12 @@ impl CellOperand {
             AddressOfCell(cell) => Ok(*cell),
             AddressOfCellInCell(cell) => {
                 CellAddress::try_from(*tape.get(*cell).ok_or(ExpandError::NotExistentCell(*cell))?)
-                    .or(Err(ExpandError::ConvertError(
-                        *tape.get(*cell).expect("Didn't fail previously"),
-                        *cell,
-                    )))
+                    .map_err(|_| {
+                        ExpandError::ConvertError(
+                            *tape.get(*cell).expect("Didn't fail previously"),
+                            *cell,
+                        )
+                    })
             }
         }
     }

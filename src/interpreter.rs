@@ -82,7 +82,7 @@ impl RamMachine {
             .code
             .jump_table
             .get(label)
-            .ok_or(JumpError::LabelNotFound(label.to_owned()))
+            .ok_or_else(|| JumpError::LabelNotFound(label.to_owned()))
         {
             Ok(v) => {
                 if *v < self.code.instructions.len() {
@@ -137,7 +137,7 @@ impl RamMachine {
             .expect("Tape was initialized with length 1")
     }
 
-    pub fn execute(&mut self, instruction: &Instruction) -> Result<RunState, RamMachineError> {
+    fn execute(&mut self, instruction: &Instruction) -> Result<RunState, RamMachineError> {
         use Instruction::*;
         match instruction {
             Load(o) => {
