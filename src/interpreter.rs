@@ -1,6 +1,6 @@
 use crate::parser::{
     instruction::Instruction,
-    operand::{CellOperand, ExpandError, Operand},
+    operand::{CellOperand, CellValue, ExpandError, Operand},
     ram_code::RamCode,
 };
 use thiserror::Error;
@@ -8,11 +8,11 @@ use thiserror::Error;
 #[derive(Debug, PartialEq, Eq)]
 pub struct RamMachine {
     code: RamCode,
-    tape: Vec<Option<i32>>,
+    tape: Vec<Option<CellValue>>,
     pointer: usize,
-    input: Vec<i32>,
+    input: Vec<CellValue>,
     input_pointer: usize,
-    output: Vec<i32>,
+    output: Vec<CellValue>,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -29,12 +29,14 @@ pub enum RamMachineError {
     InputAccessError(#[from] InputAccessError),
     #[error(transparent)]
     JumpError(#[from] JumpError),
-    #[error("Addition of `{0}` failed.")]
-    AdditionFailed(i32),
-    #[error("Multiplication by `{0}` failed.")]
-    MultiplicationFailed(i32),
-    #[error("Division by `{0}` failed.")]
-    DivisionFailed(i32),
+    #[error("Addition of `{0}` to `{1}` failed.")]
+    AdditionFailed(CellValue, CellValue),
+    #[error("Subtraction of `{0}` from `{1}` failed.")]
+    SubtractionFailed(CellValue, CellValue),
+    #[error("Multiplication by `{0}` of `{1}~ failed.")]
+    MultiplicationFailed(CellValue, CellValue),
+    #[error("Division by `{0}` of `{1}` failed.")]
+    DivisionFailed(CellValue, CellValue),
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -56,7 +58,7 @@ pub enum RunState {
 }
 
 impl RamMachine {
-    pub fn new(code: RamCode, input: Vec<i32>) -> Self {
+    pub fn new(code: RamCode, input: Vec<CellValue>) -> Self {
         RamMachine {
             code,
             tape: vec![None],
@@ -67,7 +69,7 @@ impl RamMachine {
         }
     }
 
-    pub fn run(mut self) -> Result<Vec<i32>, RamMachineError> {
+    pub fn run(mut self) -> Result<Vec<CellValue>, RamMachineError> {
         loop {
             let instruction = self.code.instructions[self.pointer].clone();
             if self.execute(&instruction)? == RunState::Halted {
@@ -77,7 +79,7 @@ impl RamMachine {
         Ok(self.output)
     }
 
-    // pub fn run_line(&mut self) -> Result<Vec<i32>, RamMachineError> {
+    // pub fn run_line(&mut self) -> Result<Vec<CellValue>, RamMachineError> {
     //     todo!()
     // }
 
@@ -99,7 +101,7 @@ impl RamMachine {
         }
     }
 
-    fn get_input(&mut self) -> Result<&i32, InputAccessError> {
+    fn get_input(&mut self) -> Result<&CellValue, InputAccessError> {
         let input = self
             .input
             .get(self.input_pointer)
@@ -116,11 +118,11 @@ impl RamMachine {
         RunState::Halted
     }
 
-    fn get(&self, operand: &Operand) -> Result<i32, ExpandError> {
+    fn get(&self, operand: &Operand) -> Result<CellValue, ExpandError> {
         Ok(*operand.expand(&self.tape)?)
     }
 
-    fn set(&mut self, cell_operand: &CellOperand, value: i32) -> Result<(), ExpandError> {
+    fn set(&mut self, cell_operand: &CellOperand, value: CellValue) -> Result<(), ExpandError> {
         let index = cell_operand.expand(&self.tape)?;
         if self.tape.len() < index + 1 {
             self.tape.resize(index + 1, None);
@@ -129,14 +131,14 @@ impl RamMachine {
         Ok(())
     }
 
-    fn buffer(&self) -> Result<&i32, BufferError> {
+    fn buffer(&self) -> Result<&CellValue, BufferError> {
         self.tape
             .first()
             .and_then(|val| val.as_ref())
             .ok_or(BufferError)
     }
 
-    fn buffer_mut(&mut self) -> &mut Option<i32> {
+    fn buffer_mut(&mut self) -> &mut Option<CellValue> {
         self.tape
             .get_mut(0)
             .expect("Tape was initialized with length 1")
@@ -154,27 +156,39 @@ impl RamMachine {
                 Ok(self.advance_pointer())
             }
             Add(o) => {
-                *self.buffer_mut() = Some(
-                    self.buffer()?
-                        .checked_add(self.get(o)?)
-                        .ok_or(RamMachineError::AdditionFailed(self.get(o)?))?,
-                );
+                *self.buffer_mut() = Some(self.buffer()?.checked_add(self.get(o)?).ok_or(
+                    RamMachineError::AdditionFailed(
+                        self.get(o).expect("Checked before"),
+                        *self.buffer().expect("Checked before"),
+                    ),
+                )?);
+                Ok(self.advance_pointer())
+            }
+            Sub(o) => {
+                *self.buffer_mut() = Some(self.buffer()?.checked_sub(self.get(o)?).ok_or(
+                    RamMachineError::SubtractionFailed(
+                        self.get(o).expect("Checked before"),
+                        *self.buffer().expect("Checked before"),
+                    ),
+                )?);
                 Ok(self.advance_pointer())
             }
             Mult(o) => {
-                *self.buffer_mut() = Some(
-                    self.buffer()?
-                        .checked_mul(self.get(o)?)
-                        .ok_or(RamMachineError::MultiplicationFailed(self.get(o)?))?,
-                );
+                *self.buffer_mut() = Some(self.buffer()?.checked_mul(self.get(o)?).ok_or(
+                    RamMachineError::MultiplicationFailed(
+                        self.get(o).expect("Checked before"),
+                        *self.buffer().expect("Checked before"),
+                    ),
+                )?);
                 Ok(self.advance_pointer())
             }
             Div(o) => {
-                *self.buffer_mut() = Some(
-                    self.buffer()?
-                        .checked_div(self.get(o)?)
-                        .ok_or(RamMachineError::DivisionFailed(self.get(o)?))?,
-                );
+                *self.buffer_mut() = Some(self.buffer()?.checked_div(self.get(o)?).ok_or(
+                    RamMachineError::DivisionFailed(
+                        self.get(o).expect("Checked before"),
+                        *self.buffer().expect("Checked before"),
+                    ),
+                )?);
                 Ok(self.advance_pointer())
             }
             Read(o) => {

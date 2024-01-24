@@ -2,10 +2,11 @@ use std::str::FromStr;
 use thiserror::Error;
 
 pub type CellAddress = usize;
+pub type CellValue = i32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operand {
-    Number(i32),                     // =x
+    Number(CellValue),               // =x
     ValueInCell(CellAddress),        // x
     ValueOfValueInCell(CellAddress), // ^x
 }
@@ -33,7 +34,10 @@ pub enum ExpandError {
 }
 
 impl Operand {
-    pub fn expand<'a>(&'a self, tape: &'a [Option<i32>]) -> Result<&'a i32, ExpandError> {
+    pub fn expand<'a>(
+        &'a self,
+        tape: &'a [Option<CellValue>],
+    ) -> Result<&'a CellValue, ExpandError> {
         use Operand::*;
         match self {
             Number(v) => Ok(v),
