@@ -26,12 +26,10 @@ pub enum CellOperand {
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum ExpandError {
-    #[error("Cell {0} does not exist or its value wasn't set.")]
-    NotExistentCell(usize),
     #[error("Value `{0}` in cell `{1}` could not be converted to a tape index.")]
     ConvertError(i32, usize),
-    // #[error("Tried reading from cell with address `{0}`, which wasn't set.")]
-    // ValueNotSet(usize),
+    #[error("Tried reading from cell with address `{0}`, which was never set.")]
+    ValueNotSet(usize),
 }
 
 impl Operand {
@@ -42,13 +40,13 @@ impl Operand {
             ValueInCell(cell) => Ok(tape
                 .get(*cell)
                 .and_then(|val| val.as_ref())
-                .ok_or(ExpandError::NotExistentCell(*cell))?),
+                .ok_or(ExpandError::ValueNotSet(*cell))?),
             ValueOfValueInCell(cell) => tape
                 .get(
                     CellAddress::try_from(
                         tape.get(*cell)
-                            .ok_or(ExpandError::NotExistentCell(*cell))?
-                            .ok_or(ExpandError::NotExistentCell(*cell))?,
+                            .ok_or(ExpandError::ValueNotSet(*cell))?
+                            .ok_or(ExpandError::ValueNotSet(*cell))?,
                     )
                     .map_err(|_| {
                         ExpandError::ConvertError(
@@ -59,7 +57,7 @@ impl Operand {
                 )
                 .and_then(|val| val.as_ref())
                 .ok_or_else(|| {
-                    ExpandError::NotExistentCell(
+                    ExpandError::ValueNotSet(
                         CellAddress::try_from(
                             tape.get(*cell).expect("Would've failed before").unwrap(),
                         )
@@ -77,8 +75,8 @@ impl CellOperand {
             AddressOfCell(cell) => Ok(*cell),
             AddressOfCellInCell(cell) => CellAddress::try_from(
                 tape.get(*cell)
-                    .ok_or(ExpandError::NotExistentCell(*cell))?
-                    .ok_or(ExpandError::NotExistentCell(*cell))?,
+                    .ok_or(ExpandError::ValueNotSet(*cell))?
+                    .ok_or(ExpandError::ValueNotSet(*cell))?,
             )
             .map_err(|_| {
                 ExpandError::ConvertError(
