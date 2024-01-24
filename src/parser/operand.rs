@@ -28,9 +28,9 @@ pub enum CellOperand {
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum ExpandError {
     #[error("Value `{0}` in cell `{1}` could not be converted to a tape index.")]
-    ConvertError(i32, usize),
+    ConvertError(CellValue, CellAddress),
     #[error("Tried reading from cell with address `{0}`, which was never set.")]
-    ValueNotSet(usize),
+    ValueNotSet(CellAddress),
 }
 
 impl Operand {
@@ -73,7 +73,7 @@ impl Operand {
 }
 
 impl CellOperand {
-    pub fn expand(&self, tape: &[Option<i32>]) -> Result<CellAddress, ExpandError> {
+    pub fn expand(&self, tape: &[Option<CellValue>]) -> Result<CellAddress, ExpandError> {
         use CellOperand::*;
         match self {
             AddressOfCell(cell) => Ok(*cell),
@@ -99,12 +99,11 @@ macro_rules! parse {
 }
 
 fn is_number(s: &str) -> bool {
-    s.parse::<i32>().is_ok()
+    s.parse::<CellValue>().is_ok()
 }
 
 fn is_positive_number(s: &str) -> bool {
-    // println!("ok");
-    s.parse::<usize>().is_ok()
+    s.parse::<CellAddress>().is_ok()
 }
 
 fn is_operand_number(s: &str) -> bool {

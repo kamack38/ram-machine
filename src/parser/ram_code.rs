@@ -1,10 +1,12 @@
 use crate::parser::instruction::Instruction;
 use std::collections::HashMap;
 
+use super::operand::CellAddress;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct RamCode {
     pub instructions: Vec<Instruction>,
-    pub jump_table: HashMap<String, usize>,
+    pub jump_table: HashMap<String, CellAddress>,
 }
 
 impl RamCode {
