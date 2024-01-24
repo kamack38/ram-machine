@@ -1,0 +1,7 @@
+# Calculate a + b + c
+read 1
+read 0
+read 2
+add 1
+add 2
+write 0

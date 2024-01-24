@@ -1,7 +1,5 @@
+# Calculates a^2
 read  1
 load  1
 mult  1
 write 0
-div   =2
-store 2
-write 2

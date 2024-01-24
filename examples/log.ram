@@ -1,0 +1,14 @@
+# Calculate log_a^b where input is [a, b]
+read 1
+read 2
+load =-1
+store 3
+LOOP: load 2
+      jzero END
+      div 1
+      store 2
+      load 3
+      add =1
+      store 3
+      jump LOOP
+END:  write 3

@@ -1,0 +1,13 @@
+# Calculate the last digit of a integer
+read  0
+store 1
+div   =10
+mult  =10
+store 2
+load  1
+sub   2
+
+# Fix the sign
+jgtz JMP
+mult =-1
+JMP: write 0

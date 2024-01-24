@@ -1,0 +1,10 @@
+# Calculates length of a zero terminated sequence of natural numbers
+      load  =0
+      store 1
+LOOP: read  0
+      jzero END
+      load  =1
+      add   1
+      store 1
+      jump  LOOP
+END:  write 1
