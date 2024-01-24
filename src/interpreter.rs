@@ -118,7 +118,9 @@ impl RamMachine {
 
     fn set(&mut self, cell_operand: &CellOperand, value: i32) -> Result<(), ExpandError> {
         let index = cell_operand.expand(&self.tape)?;
-        self.tape.resize(index + 1, 0);
+        if self.tape.len() < index + 1 {
+            self.tape.resize(index + 1, 0);
+        }
         *self.tape.get_mut(index).expect("Tape was just resized") = value;
         Ok(())
     }
