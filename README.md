@@ -7,3 +7,10 @@ This repo contains a code for a RAM Machine code parser and interpreter as defin
 ```
 cargo run <ram code file> [input arguments]
 ```
+
+## Roadmap for v1
+
+- [ ] Repl
+- [ ] Debug mode
+- [ ] Automatic changelog
+- [ ] Cargo crate with automatic publish to crates.io
