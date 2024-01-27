@@ -21,7 +21,7 @@ jobs:
       - name: Create duplication report
         run: |
           npx jscpd -g -r 'markdown'> output
-          printf '%s\n%s\n' "$(cat report/jscpd-report.md)" "$(cat output)" >> $GITHUB_STEP_SUMMARY
+          printf '%s\n\n%s\n' "$(cat report/jscpd-report.md)" "$(cat output)" >> $GITHUB_STEP_SUMMARY
       - name: 🔧 Build
         run: cargo build --verbose
       - name: 🧪 Run tests
