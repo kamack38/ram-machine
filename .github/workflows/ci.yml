@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,20 @@ jobs:
         run: |
           npx jscpd -g -r 'markdown'> output
           printf '%s\n\n%s\n' "$(cat report/jscpd-report.md)" "$(cat output)" >> $GITHUB_STEP_SUMMARY
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+
+    steps:
+      - name: 📚 Checkout
+        uses: actions/checkout@v4
+      - name: 🔄 Change rust version
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: 🔧 Build
         run: cargo build --verbose
       - name: 🧪 Run tests
