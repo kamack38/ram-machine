@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: ['main']
 
+# If new code is pushed to a PR branch, then cancel in progress workflows for that PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -16,15 +21,24 @@ jobs:
     steps:
       - name: 📚 Checkout
         uses: actions/checkout@v4
-      - name: 💄 Run lint
-        run: cargo clippy
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: 💄 Check formatting
+        run: cargo fmt --check
       - name: Create duplication report
         run: |
           npx jscpd -g -r 'markdown'> output
           printf '%s\n\n%s\n' "$(cat report/jscpd-report.md)" "$(cat output)" >> $GITHUB_STEP_SUMMARY
+
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     strategy:
+      fail-fast: false
       matrix:
         toolchain:
           - stable
@@ -34,8 +48,16 @@ jobs:
     steps:
       - name: 📚 Checkout
         uses: actions/checkout@v4
-      - name: 🔄 Change rust version
-        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - name: 🔄 Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: clippy
+      - name: 🦀 Run clippy
+        uses: giraffate/clippy-action@v1
+        with:
+          reporter: 'github-pr-check'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: 🔧 Build
         run: cargo build --verbose
       - name: 🧪 Run tests
