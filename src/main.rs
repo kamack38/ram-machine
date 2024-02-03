@@ -4,8 +4,7 @@ use std::num::ParseIntError;
 use std::process::exit;
 use thiserror::Error;
 
-use crate::interpreter::{RamMachine, RamMachineError};
-use crate::parser::{Parser, ParserError};
+use crate::interpreter::RamMachine;
 
 mod interpreter;
 mod parser;
@@ -14,10 +13,6 @@ mod parser;
 enum RuntimeError {
     #[error("Too few args given")]
     NotEnoughArgs,
-    #[error(transparent)]
-    ParserError(#[from] ParserError),
-    #[error(transparent)]
-    InterpreterError(#[from] RamMachineError),
     #[error(transparent)]
     ConvertInputError(#[from] ParseIntError),
 }
@@ -32,15 +27,13 @@ fn main() -> Result<(), RuntimeError> {
         input.push(arg.parse()?);
     }
     let unparsed_file = fs::read_to_string(args[1].as_str()).unwrap();
-    let parser = Parser::new();
-    let code = match parser.parse(&unparsed_file) {
+    let interpreter = match RamMachine::from_str(&unparsed_file, input) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", e);
             exit(1);
         }
     };
-    let interpreter = RamMachine::new(code, input);
     match interpreter.run() {
         Ok(v) => println!("{:?}", v),
         Err(e) => {
