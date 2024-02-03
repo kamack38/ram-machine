@@ -117,12 +117,12 @@ jobs:
           files: |
             ram-machine-*-${{ matrix.job.target }}.*
 
-  # publish-to-cargo:
-  #   name: 🚀 Publish to Cargo
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: 📚 Checkout
-  #       uses: actions/checkout@v3
-  #     - name: 🦀 Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #     - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
+  publish-to-cargo:
+    name: 🚀 Publish to Cargo
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📚 Checkout
+        uses: actions/checkout@v3
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
