@@ -106,6 +106,7 @@ jobs:
         env:
           TARGET: ${{ matrix.job.target }}
           PROJECT_NAME: ram-machine
+          BIN_NAME: ram
           OS_NAME: ${{ matrix.job.os }}
         run: ./scripts/before_deploy.sh
 

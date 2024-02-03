@@ -21,9 +21,9 @@ fi
 mkdir "$tempdir/$package_name"
 
 # Copy the main binary
-cp "target/$TARGET/release/$PROJECT_NAME" "$tempdir/$package_name/"
+cp "target/$TARGET/release/$BIN_NAME" "$tempdir/$package_name/"
 if [ "$OS_NAME" != windows-latest ]; then
-	"${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
+	"${gcc_prefix}"strip "$tempdir/$package_name/$BIN_NAME"
 fi
 
 # Copy RADME and LINCENSE
