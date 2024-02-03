@@ -6,7 +6,7 @@ description = "RAM machine code interpreter"
 readme = "README.md"
 license = "GPL-3.0-only"
 repository = "https://github.com/kamack38/ram-machine"
-keywords = ["cli", "ram", "machine", "maszyna ram"]
+keywords = ["cli", "ram", "machine", "maszyna"]
 categories = ["command-line-utilities"]
 
 [[bin]]
