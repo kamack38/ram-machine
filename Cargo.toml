@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "RAM machine code interpreter"
 readme = "README.md"
+license = "GPL-3.0-only"
 repository = "https://github.com/kamack38/ram-machine"
 keywords = ["cli", "ram", "machine", "maszyna ram"]
 categories = ["command-line-utilities"]
