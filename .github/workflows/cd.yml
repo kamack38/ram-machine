@@ -1,0 +1,127 @@
+name: 🚀 Continuous Deployment
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📚 Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: ✍️  Create changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-version-file: 'true'
+          output-file: 'false'
+          skip-commit: 'true'
+          skip-tag: 'true'
+          skip-on-empty: 'true'
+          git-push: 'false'
+          create-summary: 'true'
+      - name: 🎓 Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ steps.changelog.outputs.clean_changelog }}
+          fail_on_unmatched_files: true
+
+  build-and-publish:
+    needs: changelog
+    name: Publishing for ${{ matrix.job.os }}
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        job:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            use-cross: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            use-cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use-cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use-cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            use-cross: true
+          - os: ubuntu-latest
+            target: arm-unknown-linux-gnueabihf
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-cross: true
+
+    steps:
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.job.target }}
+      - name: 📚 Checkout
+        uses: actions/checkout@v3
+      - name: 🦀 Install cross
+        if: matrix.job.use-cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - name: 🔧 Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 10.7
+        shell: bash
+        run: |
+          if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.job.target }}
+          else
+            cargo build --release --target ${{ matrix.job.target }}
+          fi
+
+      - name: Install required dependencies
+        shell: bash
+        run: |
+          if [[ ${{ matrix.job.target }} == arm-unknown-linux-gnueabihf ]]; then
+              sudo apt update
+              sudo apt-get install -y binutils-arm-linux-gnueabihf
+          fi
+          if [[ ${{ matrix.job.target }} == aarch64-unknown-linux-gnu ]]; then
+              sudo apt update
+              sudo apt-get install -y binutils-aarch64-linux-gnu
+          fi
+
+      - name: 📦 Package final binary
+        shell: bash
+        env:
+          TARGET: ${{ matrix.job.target }}
+          PROJECT_NAME: ram-machine
+          OS_NAME: ${{ matrix.job.os }}
+        run: ./scripts/before_deploy.sh
+
+      - name: 🎓 Upload binaries to the release
+        uses: softprops/action-gh-release@v1
+        with:
+          # token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ram-machine-*-${{ matrix.job.target }}.*
+
+  # publish-to-cargo:
+  #   name: 🚀 Publish to Cargo
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: 📚 Checkout
+  #       uses: actions/checkout@v3
+  #     - name: 🦀 Install Rust toolchain
+  #       uses: dtolnay/rust-toolchain@stable
+  #     - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty

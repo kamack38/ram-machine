@@ -2,6 +2,15 @@
 name = "ram-machine"
 version = "0.1.0"
 edition = "2021"
+description = "RAM machine code interpreter"
+readme = "README.md"
+repository = "https://github.com/kamack38/ram-machine"
+keywords = ["cli", "ram", "machine", "maszyna ram"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "ram"
+path = "src/main.rs"
 
 [dependencies]
 thiserror = "1.0.52"
