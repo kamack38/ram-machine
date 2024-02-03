@@ -1,4 +1,4 @@
-name: '🎡 CI'
+name: 🎡 Continuous Integration
 
 on:
   push:
