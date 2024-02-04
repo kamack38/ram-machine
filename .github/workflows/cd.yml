@@ -1,9 +1,12 @@
 name: 🚀 Continuous Deployment
 
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      skip-cargo-publish:
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -11,28 +14,33 @@ permissions:
 jobs:
   changelog:
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit-sha.outputs.SHA }}
+      tag: ${{ steps.changelog.outputs.tag }}
     steps:
       - name: 📚 Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
       - name: ✍️  Create changelog
         id: changelog
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          skip-version-file: 'true'
+          git-message: 'chore(release): 🤖 {version}'
           output-file: 'false'
-          skip-commit: 'true'
-          skip-tag: 'true'
+          version-file: './Cargo.toml'
+          version-path: 'package.version'
           skip-on-empty: 'true'
-          git-push: 'false'
           create-summary: 'true'
+          tag-prefix: ''
+      - name: Output commit SHA
+        id: commit-sha
+        run: |
+          echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: 🎓 Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
-          fail_on_unmatched_files: true
 
   build-and-publish:
     needs: changelog
@@ -72,7 +80,9 @@ jobs:
         with:
           targets: ${{ matrix.job.target }}
       - name: 📚 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changelog.outputs.sha }}
       - name: 🦀 Install cross
         if: matrix.job.use-cross
         uses: taiki-e/install-action@v2
@@ -108,21 +118,27 @@ jobs:
           PROJECT_NAME: ram-machine
           BIN_NAME: ram
           OS_NAME: ${{ matrix.job.os }}
+          TAG: ${{ needs.changelog.outputs.tag }}
         run: ./scripts/before_deploy.sh
 
       - name: 🎓 Upload binaries to the release
         uses: softprops/action-gh-release@v1
         with:
-          # token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
+          tag_name: ${{ needs.changelog.outputs.tag }}
           files: |
             ram-machine-*-${{ matrix.job.target }}.*
 
   publish-to-cargo:
+    needs: changelog
     name: 🚀 Publish to Cargo
+    if: ${{ github.event.inputs.skip-cargo-publish != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: 📚 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changelog.outputs.sha }}
       - name: 🦀 Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
