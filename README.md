@@ -24,7 +24,7 @@ ram <ram code file> [input arguments]
 
 ## Roadmap for v1
 
+- [x] Automatic changelog
+- [x] Cargo crate with automatic publish to crates.io
 - [ ] Repl
 - [ ] Debug mode
-- [ ] Automatic changelog
-- [ ] Cargo crate with automatic publish to crates.io
