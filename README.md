@@ -28,3 +28,4 @@ ram <ram code file> [input arguments]
 - [x] Cargo crate with automatic publish to crates.io
 - [ ] Repl
 - [ ] Debug mode
+- [ ] Use clap to parse args
