@@ -37,7 +37,7 @@ impl Parser {
     }
 
     pub fn parse_line(&self, line: &str, code: &mut RamCode) -> Result<(), ParserError> {
-        let mut slices = line.split(' ').filter(|s| !s.is_empty());
+        let mut slices = line.split_whitespace().filter(|s| !s.is_empty());
 
         let mut slice = match slices.next() {
             None => return Ok(()),
@@ -224,6 +224,23 @@ add =5
 
         let expected_code = RamCode {
             instructions: vec![R(AC(1)), L(VC(1)), M(Num(2)), A(Num(5))],
+            jump_table: HashMap::new(),
+        };
+        assert_eq!(parser.parse(&code), Ok(expected_code));
+    }
+
+    #[test]
+    fn parse_whitespace() {
+        let code = "
+		read 3
+	load 3
+add =5
+";
+
+        let parser = Parser::new();
+
+        let expected_code = RamCode {
+            instructions: vec![R(AC(3)), L(VC(3)), A(Num(5))],
             jump_table: HashMap::new(),
         };
         assert_eq!(parser.parse(&code), Ok(expected_code));
