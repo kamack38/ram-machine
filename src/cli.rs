@@ -1,3 +1,7 @@
+use ram_machine::error::ParserErrorChain;
+use ram_machine::parser::Parser;
+use ram_machine::ram_code::RamCode;
+use std::ops::Add;
 use std::path::PathBuf;
 use std::{fs, io};
 use thiserror::Error;
@@ -7,9 +11,9 @@ use ram_machine::{
     parser::ParserError,
 };
 
-use clap::{Parser, Subcommand};
+use clap::{Parser as ClapParser, Subcommand};
 
-#[derive(Parser, Debug)]
+#[derive(ClapParser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Specifies the path to the input file from which data will be read (input passed from the command line takes precedence)
@@ -32,7 +36,9 @@ struct Cli {
 pub enum Commands {
     /// Run ram machine code from file
     Run { file: PathBuf, input: Vec<i64> },
-    // Check { file: PathBuf },
+
+    /// Validates ram code syntax of a given file
+    Check { file: PathBuf },
     // Repl,
     // Debug,
 }
@@ -56,6 +62,9 @@ pub enum RuntimeError {
 
     #[error("Could not write output to file: '{0}'")]
     WriteOutputFileError(io::Error),
+
+    #[error("{0}")]
+    CheckFileError(ParserErrorChain),
 }
 
 pub fn app() -> Result<(), RuntimeError> {
@@ -94,6 +103,33 @@ pub fn app() -> Result<(), RuntimeError> {
                         .join(" "),
                 )
                 .map_err(|e| RuntimeError::WriteOutputFileError(e))?;
+            }
+        }
+        Commands::Check { file } => {
+            let unparsed_file =
+                fs::read_to_string(file).map_err(|e| RuntimeError::ReadCodeError(e))?;
+            let parser = Parser::new();
+            let mut errors = ParserErrorChain::new();
+
+            let mut code = RamCode::new();
+            let lines = unparsed_file.lines().into_iter().enumerate();
+            for (index, line) in lines {
+                if line.is_empty() {
+                    continue;
+                };
+                parser.parse_line(line, &mut code).unwrap_or_else(|err| {
+                    errors.add((
+                        index
+                            .add(1)
+                            .try_into()
+                            .expect("Could not convert the line number to u32"),
+                        err,
+                    ))
+                });
+            }
+
+            if !errors.is_empty() {
+                return Err(RuntimeError::CheckFileError(errors));
             }
         }
     };
