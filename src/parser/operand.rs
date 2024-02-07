@@ -12,9 +12,13 @@ pub enum Operand {
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
+#[error("Operand {0} is not a valid operand")]
+pub struct InvalidOperandError(String);
+
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum OperandParseError {
-    #[error("Operand {0} is not a valid operand")]
-    InvalidOperand(String),
+    #[error("Operand {0} is not a valid operand for keyword `{1}`")]
+    InvalidOperand(String, String),
     #[error("Expected operand for keyword `{0}`, found nothing")]
     OperandNotFound(String),
 }
@@ -126,7 +130,7 @@ fn is_operand_address_of_cell_in_cell(s: &str) -> bool {
 }
 
 impl FromStr for Operand {
-    type Err = OperandParseError;
+    type Err = InvalidOperandError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             s if is_operand_number(s) => Ok(Self::Number(parse!(s[1..]))),
@@ -134,7 +138,7 @@ impl FromStr for Operand {
             s if is_operand_value_of_value_in_cell(s) => {
                 Ok(Self::ValueOfValueInCell(parse!(s[1..])))
             }
-            _ => Err(OperandParseError::InvalidOperand(s.to_owned())),
+            _ => Err(InvalidOperandError(s.to_owned())),
         }
     }
 }
@@ -143,21 +147,22 @@ impl TryFrom<(Option<&str>, &str)> for Operand {
     type Error = OperandParseError;
     fn try_from((s, keyword): (Option<&str>, &str)) -> Result<Self, Self::Error> {
         match s {
-            Some(s) => Operand::from_str(s),
+            Some(s) => Operand::from_str(s)
+                .map_err(|err| OperandParseError::InvalidOperand(err.0, keyword.to_owned())),
             None => Err(OperandParseError::OperandNotFound(keyword.to_owned())),
         }
     }
 }
 
 impl FromStr for CellOperand {
-    type Err = OperandParseError;
+    type Err = InvalidOperandError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             s if is_operand_address_of_cell(s) => Ok(Self::AddressOfCell(parse!(s))),
             s if is_operand_address_of_cell_in_cell(s) => {
                 Ok(Self::AddressOfCellInCell(parse!(s[1..])))
             }
-            _ => Err(OperandParseError::InvalidOperand(s.to_owned())),
+            _ => Err(InvalidOperandError(s.to_owned())),
         }
     }
 }
@@ -166,7 +171,8 @@ impl TryFrom<(Option<&str>, &str)> for CellOperand {
     type Error = OperandParseError;
     fn try_from((s, keyword): (Option<&str>, &str)) -> Result<Self, Self::Error> {
         match s {
-            Some(s) => CellOperand::from_str(s),
+            Some(s) => CellOperand::from_str(s)
+                .map_err(|err| OperandParseError::InvalidOperand(err.0, keyword.to_owned())),
             None => Err(OperandParseError::OperandNotFound(keyword.to_owned())),
         }
     }
