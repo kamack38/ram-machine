@@ -9,6 +9,11 @@ repository = "https://github.com/kamack38/ram-machine"
 keywords = ["cli", "ram", "machine", "maszyna"]
 categories = ["command-line-utilities"]
 
+[lib]
+name = "ram_machine"
+path = "src/lib.rs"
+doc = true
+
 [[bin]]
 name = "ram"
 path = "src/main.rs"

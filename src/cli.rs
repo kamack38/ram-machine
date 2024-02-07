@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::{fs, io};
 use thiserror::Error;
 
-use crate::{
+use ram_machine::{
     interpreter::{RamMachine, RamMachineError},
     parser::ParserError,
 };
