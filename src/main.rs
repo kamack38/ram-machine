@@ -3,8 +3,6 @@ use std::process::exit;
 use cli::app;
 
 mod cli;
-mod interpreter;
-mod parser;
 
 fn main() {
     match app() {
