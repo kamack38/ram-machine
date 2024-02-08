@@ -32,6 +32,7 @@ jobs:
           skip-on-empty: 'true'
           create-summary: 'true'
           tag-prefix: ''
+          pre-commit: './scripts/fix_Cargo_lock.js'
       - name: Output commit SHA
         id: commit-sha
         run: |
