@@ -33,6 +33,15 @@ Options:
   -q, --quiet               Don't pass code output to STDOUT
   -h, --help                Print help
   -V, --version             Print version
+
+```
+
+### Generating TAB completion
+
+To generate TAB completion file for a given shell run
+
+```
+ram init <shell>
 ```
 
 ### Running code from file
