@@ -11,17 +11,18 @@ use ram_machine::{
     parser::ParserError,
 };
 
-use clap::{Parser as ClapParser, Subcommand};
+use clap::{Command, CommandFactory, Parser as ClapParser, Subcommand, ValueHint};
+use clap_complete::{generate, Generator, Shell};
 
 #[derive(ClapParser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(name = "ram", author, version, about, long_about = None)]
 struct Cli {
     /// Specifies the path to the input file from which data will be read (input passed from the command line takes precedence)
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
     input_file: Option<PathBuf>,
 
     /// Specifies the path to the output file where the results will be written
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
     output_file: Option<PathBuf>,
 
     /// Don't pass code output to STDOUT
@@ -39,6 +40,9 @@ pub enum Commands {
 
     /// Validates ram code syntax of a given file
     Check { file: PathBuf },
+
+    /// Generate a shell completion file
+    Init { shell: Shell },
     // Repl,
     // Debug,
 }
@@ -67,8 +71,13 @@ pub enum RuntimeError {
     CheckFileError(ParserErrorChain),
 }
 
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+}
+
 pub fn app() -> Result<(), RuntimeError> {
     let cli = Cli::parse();
+
     match cli.command {
         Commands::Run { file, input } => {
             let mut input = input;
@@ -131,6 +140,11 @@ pub fn app() -> Result<(), RuntimeError> {
             if !errors.is_empty() {
                 return Err(RuntimeError::CheckFileError(errors));
             }
+        }
+        Commands::Init { shell } => {
+            let mut cmd = Cli::command();
+            eprintln!("Generating completion file for {shell:?}...");
+            print_completions(shell, &mut cmd)
         }
     };
     Ok(())
