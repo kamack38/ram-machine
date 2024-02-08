@@ -1,5 +1,6 @@
 use crate::parser::ParserError;
 
+#[derive(Debug)]
 pub struct ParserErrorChain(Vec<(u32, ParserError)>);
 
 impl ParserErrorChain {
@@ -13,20 +14,6 @@ impl ParserErrorChain {
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
-    }
-}
-
-impl std::fmt::Debug for ParserErrorChain {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut output: String = "".to_string();
-        for (line, err) in &self.0 {
-            output.push_str(&format!(
-                "At line {} found error: {}\n",
-                line.to_string(),
-                err
-            ));
-        }
-        write!(f, "{}", output)
     }
 }
 
