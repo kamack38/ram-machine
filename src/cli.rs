@@ -1,15 +1,11 @@
 use ram_machine::error::ParserErrorChain;
-use ram_machine::parser::Parser;
-use ram_machine::ram_code::RamCode;
+use ram_machine::parser::{CodeParseError, RamCode};
 use std::ops::Add;
 use std::path::PathBuf;
 use std::{fs, io};
 use thiserror::Error;
 
-use ram_machine::{
-    interpreter::{RamMachine, RamMachineError},
-    parser::ParserError,
-};
+use ram_machine::interpreter::{RamMachine, RamMachineError};
 
 use clap::{Command, CommandFactory, Parser as ClapParser, Subcommand, ValueHint};
 use clap_complete::{generate, Generator, Shell};
@@ -53,7 +49,7 @@ pub enum RuntimeError {
     ConvertInputError(String),
 
     #[error(transparent)]
-    ParserError(#[from] ParserError),
+    CodeParseError(#[from] CodeParseError),
 
     #[error(transparent)]
     RamMachineError(#[from] RamMachineError),
@@ -117,7 +113,6 @@ pub fn app() -> Result<(), RuntimeError> {
         Commands::Check { file } => {
             let unparsed_file =
                 fs::read_to_string(file).map_err(|e| RuntimeError::ReadCodeError(e))?;
-            let parser = Parser::new();
             let mut errors = ParserErrorChain::new();
 
             let mut code = RamCode::new();
@@ -126,7 +121,7 @@ pub fn app() -> Result<(), RuntimeError> {
                 if line.is_empty() {
                     continue;
                 };
-                parser.parse_line(line, &mut code).unwrap_or_else(|err| {
+                code.push_line(line).unwrap_or_else(|err| {
                     errors.add((
                         index
                             .add(1)

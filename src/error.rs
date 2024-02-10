@@ -1,14 +1,14 @@
-use crate::parser::ParserError;
+use crate::parser::CodeParseError;
 
 #[derive(Debug)]
-pub struct ParserErrorChain(Vec<(u32, ParserError)>);
+pub struct ParserErrorChain(Vec<(u32, CodeParseError)>);
 
 impl ParserErrorChain {
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
-    pub fn add(&mut self, (line, err): (u32, ParserError)) {
+    pub fn add(&mut self, (line, err): (u32, CodeParseError)) {
         self.0.push((line, err))
     }
 

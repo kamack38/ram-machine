@@ -1,8 +1,7 @@
 use crate::parser::{
     instruction::Instruction,
     operand::{CellOperand, CellValue, ExpandError, Operand},
-    ram_code::RamCode,
-    Parser, ParserError,
+    CodeParseError, RamCode,
 };
 use thiserror::Error;
 
@@ -70,8 +69,8 @@ impl RamMachine {
         }
     }
 
-    pub fn from_str(str: &str, input: Vec<CellValue>) -> Result<Self, ParserError> {
-        Ok(RamMachine::new(Parser::new().parse(str)?, input))
+    pub fn from_str(str: &str, input: Vec<CellValue>) -> Result<Self, CodeParseError> {
+        Ok(RamMachine::new(str.parse()?, input))
     }
 
     pub fn run(mut self) -> Result<Vec<CellValue>, RamMachineError> {

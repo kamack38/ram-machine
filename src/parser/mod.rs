@@ -1,15 +1,20 @@
 pub mod instruction;
 pub mod operand;
-pub mod ram_code;
 
-use instruction::{Instruction, InstructionParseError};
-use ram_code::RamCode;
+use crate::{instruction::Instruction, instruction::InstructionParseError};
+use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
-pub struct Parser {}
+use super::operand::CellAddress;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct RamCode {
+    pub instructions: Vec<Instruction>,
+    pub jump_table: HashMap<String, CellAddress>,
+}
 
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum ParserError {
+pub enum CodeParseError {
     #[error("Expected EOL, found `{0}`")]
     UnexpectedArgument(String),
     #[error(transparent)]
@@ -24,23 +29,17 @@ macro_rules! return_if_comment {
     };
 }
 
-impl Parser {
-    const LABEL_END: char = ':';
+const LABEL_END: char = ':';
 
-    pub fn new() -> Parser {
-        Parser {}
-    }
-
-    pub fn parse(self, string: &str) -> Result<RamCode, ParserError> {
-        let mut code = RamCode::new();
-        let lines = string.lines().filter(|s| !s.is_empty());
-        for line in lines {
-            self.parse_line(line, &mut code)?;
+impl RamCode {
+    pub fn new() -> RamCode {
+        RamCode {
+            instructions: Vec::new(),
+            jump_table: HashMap::new(),
         }
-        Ok(code)
     }
 
-    pub fn parse_line(&self, line: &str, code: &mut RamCode) -> Result<(), ParserError> {
+    pub fn push_line(&mut self, line: &str) -> Result<(), CodeParseError> {
         let mut slices = line.split_whitespace().filter(|s| !s.is_empty());
 
         let mut slice = match slices.next() {
@@ -50,10 +49,10 @@ impl Parser {
 
         return_if_comment!(slice);
 
-        if slice.ends_with(Self::LABEL_END) {
-            code.jump_table.insert(
+        if slice.ends_with(LABEL_END) {
+            self.jump_table.insert(
                 slice.trim_end_matches(':').to_owned(),
-                code.instructions.len(),
+                self.instructions.len(),
             );
 
             slice = match slices.next() {
@@ -67,15 +66,31 @@ impl Parser {
         let argument = slices.next();
 
         let instruction = Instruction::try_from((slice, argument))?;
-        code.add_instruction(instruction);
+        self.add_instruction(instruction);
 
         let rest = slices.next();
 
         if let Some(v) = rest {
             return_if_comment!(v);
-            return Err(ParserError::UnexpectedArgument(v.to_string()));
+            return Err(CodeParseError::UnexpectedArgument(v.to_string()));
         }
 
         Ok(())
+    }
+
+    pub fn add_instruction(&mut self, instruction: Instruction) {
+        self.instructions.push(instruction)
+    }
+}
+
+impl FromStr for RamCode {
+    type Err = CodeParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut code = RamCode::new();
+        let lines = s.lines().filter(|line| !line.is_empty());
+        for line in lines {
+            code.push_line(line)?;
+        }
+        Ok(code)
     }
 }

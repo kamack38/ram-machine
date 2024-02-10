@@ -1,4 +1,4 @@
-use super::operand::{CellOperand, Operand, OperandParseError};
+use crate::operand::{CellOperand, Operand, OperandParseError};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

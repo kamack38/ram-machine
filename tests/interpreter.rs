@@ -1,13 +1,14 @@
 use ram_machine::interpreter::RamMachine;
-use ram_machine::parser::Parser;
+use ram_machine::parser::RamCode;
 
 use std::fs::read_to_string;
+use std::str::FromStr;
 
 #[test]
 fn three_sum() {
     let path = "./examples/three_sum.ram";
     let file = read_to_string(path).unwrap();
-    let code = Parser::new().parse(&file).unwrap();
+    let code = RamCode::from_str(&file).unwrap();
     let input1: Vec<i64> = vec![1, 3, 2];
     let input2: Vec<i64> = vec![-1232323, 34324, 92384];
     let input3: Vec<i64> = vec![324, 546, 8023];
@@ -39,7 +40,7 @@ fn three_sum() {
 fn square() {
     let path = "./examples/square.ram";
     let file = read_to_string(path).unwrap();
-    let code = Parser::new().parse(&file).unwrap();
+    let code = RamCode::from_str(&file).unwrap();
     let input1 = vec![36];
     let input2 = vec![0];
     let input3 = vec![1_000_000_000];
@@ -71,7 +72,7 @@ fn square() {
 fn sequence_length() {
     let path = "./examples/sequence_length.ram";
     let file = read_to_string(path).unwrap();
-    let code = Parser::new().parse(&file).unwrap();
+    let code = RamCode::from_str(&file).unwrap();
     let input1 = vec![1, 2, 4, 6, 8, 9, 10, 0];
     let input2 = vec![1, 5, 6, 7, 0];
     let mut input3 = vec![66; 66];
@@ -105,7 +106,7 @@ fn sequence_length() {
 fn log() {
     let path = "./examples/log.ram";
     let file = read_to_string(path).unwrap();
-    let code = Parser::new().parse(&file).unwrap();
+    let code = RamCode::from_str(&file).unwrap();
     let input1 = vec![2, 2 << 31];
     let input2 = vec![5, 1];
     let input3 = vec![3, 55];
@@ -137,7 +138,7 @@ fn log() {
 fn unit_digit() {
     let path = "./examples/unit_digit.ram";
     let file = read_to_string(path).unwrap();
-    let code = Parser::new().parse(&file).unwrap();
+    let code = RamCode::from_str(&file).unwrap();
     let input1 = vec![320423789];
     let input2 = vec![-234234235];
     let input3 = vec![999_999_999_999_999_991];
