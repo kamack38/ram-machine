@@ -13,14 +13,6 @@ use clap_complete::{generate, Generator, Shell};
 #[derive(ClapParser, Debug)]
 #[command(name = "ram", author, version, about, long_about = None)]
 struct Cli {
-    /// Specifies the path to the input file from which data will be read (input passed from the command line takes precedence)
-    #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
-    input_file: Option<PathBuf>,
-
-    /// Specifies the path to the output file where the results will be written
-    #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
-    output_file: Option<PathBuf>,
-
     /// Don't pass code output to STDOUT
     #[arg(short, long)]
     quiet: bool,
@@ -32,7 +24,22 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Run ram machine code from file
-    Run { file: PathBuf, input: Vec<i64> },
+    Run {
+        /// File containing code to execute
+        file: PathBuf,
+
+        /// Additional code input
+        input: Vec<i64>,
+
+        /// Specifies the path to the input file from which data will be read
+        /// (input passed from the command line takes precedence)
+        #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
+        input_file: Option<PathBuf>,
+
+        /// Specifies the path to the output file where the results will be written
+        #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
+        output_file: Option<PathBuf>,
+    },
 
     /// Validates ram code syntax of a given file
     Check { file: PathBuf },
@@ -75,10 +82,15 @@ pub fn app() -> Result<(), RuntimeError> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Run { file, input } => {
+        Commands::Run {
+            file,
+            input,
+            input_file,
+            output_file,
+        } => {
             let mut input = input;
 
-            if let Some(input_file) = cli.input_file {
+            if let Some(input_file) = input_file {
                 let file =
                     fs::read_to_string(input_file).map_err(|e| RuntimeError::ReadInputError(e))?;
                 for s in file.split_whitespace() {
@@ -98,7 +110,7 @@ pub fn app() -> Result<(), RuntimeError> {
                 println!("{:?}", output);
             }
 
-            if let Some(output_file) = cli.output_file {
+            if let Some(output_file) = output_file {
                 fs::write(
                     output_file,
                     output
