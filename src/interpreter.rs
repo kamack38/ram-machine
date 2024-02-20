@@ -33,7 +33,7 @@ pub enum RamMachineError {
     AdditionFailed(CellValue, CellValue),
     #[error("Subtraction of `{0}` from `{1}` failed.")]
     SubtractionFailed(CellValue, CellValue),
-    #[error("Multiplication by `{0}` of `{1}~ failed.")]
+    #[error("Multiplication by `{0}` of `{1}` failed.")]
     MultiplicationFailed(CellValue, CellValue),
     #[error("Division by `{0}` of `{1}` failed.")]
     DivisionFailed(CellValue, CellValue),
