@@ -207,15 +207,13 @@ impl RamMachine {
             Jump(s) => Ok(self.jump_to(s)?),
             Jgtz(s) => {
                 if *self.buffer()? > 0 {
-                    self.jump_to(s)?;
-                    return Ok(RunState::Running);
+                    return Ok(self.jump_to(s)?);
                 }
                 Ok(self.advance_pointer())
             }
             Jzero(s) => {
                 if *self.buffer()? == 0 {
-                    self.jump_to(s)?;
-                    Ok(RunState::Running)
+                    return Ok(self.jump_to(s)?);
                 } else {
                     Ok(self.advance_pointer())
                 }
