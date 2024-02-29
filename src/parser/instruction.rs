@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::operand::{CellOperand, Operand, OperandParseError};
 use thiserror::Error;
 
@@ -59,6 +61,25 @@ impl TryFrom<(&str, Option<&str>)> for Instruction {
                 }
             }
             _ => Err(InstructionParseError::InvalidKeyword(keyword.to_owned())),
+        }
+    }
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Instruction::Load(op) => write!(f, "LOAD {}", op),
+            Instruction::Store(cell_op) => write!(f, "STORE {}", cell_op),
+            Instruction::Add(op) => write!(f, "ADD {}", op),
+            Instruction::Sub(op) => write!(f, "SUB {}", op),
+            Instruction::Mult(op) => write!(f, "MULT {}", op),
+            Instruction::Div(op) => write!(f, "DIV {}", op),
+            Instruction::Read(cell_op) => write!(f, "READ {}", cell_op),
+            Instruction::Write(op) => write!(f, "WRITE {}", op),
+            Instruction::Jump(label) => write!(f, "JUMP {}", label),
+            Instruction::Jgtz(label) => write!(f, "JGTZ {}", label),
+            Instruction::Jzero(label) => write!(f, "JZERO {}", label),
+            Instruction::Halt => write!(f, "HALT"),
         }
     }
 }

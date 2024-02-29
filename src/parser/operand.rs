@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 use thiserror::Error;
 
 pub type CellAddress = usize;
@@ -25,8 +25,8 @@ pub enum OperandParseError {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CellOperand {
-    AddressOfCell(CellAddress),
-    AddressOfCellInCell(CellAddress),
+    AddressOfCell(CellAddress),       // x
+    AddressOfCellInCell(CellAddress), // ^x
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -174,6 +174,25 @@ impl TryFrom<(Option<&str>, &str)> for CellOperand {
             Some(s) => CellOperand::from_str(s)
                 .map_err(|err| OperandParseError::InvalidOperand(err.0, keyword.to_owned())),
             None => Err(OperandParseError::OperandNotFound(keyword.to_owned())),
+        }
+    }
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operand::Number(value) => write!(f, "={}", value),
+            Operand::ValueInCell(address) => write!(f, "{}", address),
+            Operand::ValueOfValueInCell(address) => write!(f, "^{}", address),
+        }
+    }
+}
+
+impl fmt::Display for CellOperand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CellOperand::AddressOfCell(address) => write!(f, "{}", address),
+            CellOperand::AddressOfCellInCell(address) => write!(f, "^{}", address),
         }
     }
 }
