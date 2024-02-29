@@ -24,16 +24,16 @@ RAM machine code interpreter
 Usage: ram [OPTIONS] <COMMAND>
 
 Commands:
-  run   Run ram machine code from file
-  help  Print this message or the help of the given subcommand(s)
+  run    Run ram machine code from file
+  check  Validates ram code syntax of a given file
+  init   Generate a shell completion file
+  debug  Run ram machine code and see the tape, input, output for each instruction
+  help   Print this message or the help of the given subcommand(s)
 
 Options:
-  -i, --input-file <FILE>   Specifies the path to the input file from which data will be read (input passed from the command line takes precedence)
-  -o, --output-file <FILE>  Specifies the path to the output file where the results will be written
-  -q, --quiet               Don't pass code output to STDOUT
-  -h, --help                Print help
-  -V, --version             Print version
-
+  -q, --quiet    Don't pass code output to STDOUT
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
 ### Generating TAB completion
@@ -48,6 +48,73 @@ ram init <shell>
 
 ```
 ram run file.ram 1 2 3 4
+```
+
+### Debugging code
+
+```
+ram debug examples/three_sum.ram 1 2 3
+```
+
+Here's the debug output:
+
+```
+╭───╮
+│ 0 │
+├───┤
+│ ? │
+╰───╯
+Input: 1 2 3
+Output:
+Next instruction: READ 1
+╭───┬───╮
+│ 0 │ 1 │
+├───┼───┤
+│ ? │ 1 │
+╰───┴───╯
+Input: 1 2 3
+Output:
+Next instruction: READ 0
+╭───┬───╮
+│ 0 │ 1 │
+├───┼───┤
+│ 2 │ 1 │
+╰───┴───╯
+Input: 1 2 3
+Output:
+Next instruction: READ 2
+╭───┬───┬───╮
+│ 0 │ 1 │ 2 │
+├───┼───┼───┤
+│ 2 │ 1 │ 3 │
+╰───┴───┴───╯
+Input: 1 2 3
+Output:
+Next instruction: ADD 1
+╭───┬───┬───╮
+│ 0 │ 1 │ 2 │
+├───┼───┼───┤
+│ 3 │ 1 │ 3 │
+╰───┴───┴───╯
+Input: 1 2 3
+Output:
+Next instruction: ADD 2
+╭───┬───┬───╮
+│ 0 │ 1 │ 2 │
+├───┼───┼───┤
+│ 6 │ 1 │ 3 │
+╰───┴───┴───╯
+Input: 1 2 3
+Output:
+Next instruction: WRITE 0
+╭───┬───┬───╮
+│ 0 │ 1 │ 2 │
+├───┼───┼───┤
+│ 6 │ 1 │ 3 │
+╰───┴───┴───╯
+Input: 1 2 3
+Output: 6
+Next instruction: HALT
 ```
 
 ## Roadmap for v1
