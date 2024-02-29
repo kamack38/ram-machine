@@ -54,6 +54,11 @@ pub enum Commands {
 
         /// Additional code input
         input: Vec<i64>,
+
+        /// Specifies the path to the input file from which data will be read
+        /// (input passed from the command line takes precedence)
+        #[arg(short, long, value_name = "FILE", value_hint = ValueHint::FilePath)]
+        input_file: Option<PathBuf>,
     },
 }
 
@@ -160,7 +165,24 @@ pub fn app() -> Result<(), RuntimeError> {
             eprintln!("Generating completion file for {shell:?}...");
             print_completions(shell, &mut cmd)
         }
-        Commands::Debug { file, input } => {
+        Commands::Debug {
+            file,
+            input,
+            input_file,
+        } => {
+            let mut input = input;
+
+            if let Some(input_file) = input_file {
+                let file =
+                    fs::read_to_string(input_file).map_err(|e| RuntimeError::ReadInputError(e))?;
+                for s in file.split_whitespace() {
+                    input.push(
+                        s.parse::<i64>()
+                            .map_err(|_| RuntimeError::ConvertInputError(s.to_string()))?,
+                    );
+                }
+            }
+
             let unparsed_file =
                 fs::read_to_string(file).map_err(|e| RuntimeError::ReadCodeError(e))?;
             let mut interpreter = RamMachine::from_str(&unparsed_file, input)?;
