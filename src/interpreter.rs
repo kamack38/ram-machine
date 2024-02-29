@@ -3,6 +3,7 @@ use crate::parser::{
     operand::{CellOperand, CellValue, ExpandError, Operand},
     CodeParseError, RamCode,
 };
+use tabled::{settings::Style, Table};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -83,9 +84,53 @@ impl RamMachine {
         Ok(self.output)
     }
 
-    // pub fn run_line(&mut self) -> Result<Vec<CellValue>, RamMachineError> {
-    //     todo!()
-    // }
+    pub fn run_line(&mut self) -> Result<RunState, RamMachineError> {
+        let instruction = self.code.instructions[self.pointer].clone();
+        self.execute(&instruction)
+    }
+
+    pub fn get_current_instruction(&self) -> &Instruction {
+        &self
+            .code
+            .instructions
+            .get(self.pointer)
+            .unwrap_or(&Instruction::Halt)
+    }
+
+    pub fn print_state(&self) {
+        let tab: Vec<String> = self
+            .tape
+            .iter()
+            .map(|x| match x {
+                Some(v) => v.to_string(),
+                None => "?".to_string(),
+            })
+            .collect();
+        let table = Table::builder(tab)
+            .index()
+            .transpose()
+            .column(0)
+            .build()
+            .with(Style::rounded())
+            .to_string();
+
+        let next_instruction = self.get_current_instruction();
+
+        println!("{table}");
+        println!(
+            "Input:{}",
+            self.input
+                .iter()
+                .fold("".to_string(), |s, v| format!("{s} {v}"))
+        );
+        println!(
+            "Output:{}",
+            self.output
+                .iter()
+                .fold("".to_string(), |s, v| format!("{s} {v}"))
+        );
+        println!("Next instruction: {next_instruction}");
+    }
 
     fn jump_to(&mut self, label: &str) -> Result<RunState, JumpError> {
         match self

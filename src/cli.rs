@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::{fs, io};
 use thiserror::Error;
 
-use ram_machine::interpreter::{RamMachine, RamMachineError};
+use ram_machine::interpreter::{RamMachine, RamMachineError, RunState};
 
 use clap::{Command, CommandFactory, Parser as ClapParser, Subcommand, ValueHint};
 use clap_complete::{generate, Generator, Shell};
@@ -25,7 +25,7 @@ struct Cli {
 pub enum Commands {
     /// Run ram machine code from file
     Run {
-        /// File containing code to execute
+        /// Path to file containing code to execute
         file: PathBuf,
 
         /// Additional code input
@@ -47,7 +47,14 @@ pub enum Commands {
     /// Generate a shell completion file
     Init { shell: Shell },
     // Repl,
-    // Debug,
+    /// Run ram machine code and see the tape, input, output for each instruction
+    Debug {
+        /// Path to file containing code to execute
+        file: PathBuf,
+
+        /// Additional code input
+        input: Vec<i64>,
+    },
 }
 
 #[derive(Error, Debug)]
@@ -152,6 +159,18 @@ pub fn app() -> Result<(), RuntimeError> {
             let mut cmd = Cli::command();
             eprintln!("Generating completion file for {shell:?}...");
             print_completions(shell, &mut cmd)
+        }
+        Commands::Debug { file, input } => {
+            let unparsed_file =
+                fs::read_to_string(file).map_err(|e| RuntimeError::ReadCodeError(e))?;
+            let mut interpreter = RamMachine::from_str(&unparsed_file, input)?;
+            loop {
+                interpreter.print_state();
+                if interpreter.run_line()? == RunState::Halted {
+                    break;
+                }
+            }
+            interpreter.print_state();
         }
     };
     Ok(())
