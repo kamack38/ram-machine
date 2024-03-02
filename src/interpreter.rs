@@ -90,8 +90,7 @@ impl RamMachine {
     }
 
     pub fn get_current_instruction(&self) -> &Instruction {
-        &self
-            .code
+        self.code
             .instructions
             .get(self.pointer)
             .unwrap_or(&Instruction::Halt)
@@ -258,7 +257,7 @@ impl RamMachine {
             }
             Jzero(s) => {
                 if *self.buffer()? == 0 {
-                    return Ok(self.jump_to(s)?);
+                    Ok(self.jump_to(s)?)
                 } else {
                     Ok(self.advance_pointer())
                 }

@@ -21,11 +21,7 @@ impl std::fmt::Display for ParserErrorChain {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut output: String = "".to_string();
         for (line, err) in &self.0 {
-            output.push_str(&format!(
-                "At line {} found error: {}\n",
-                line.to_string(),
-                err
-            ));
+            output.push_str(&format!("At line {} found error: {}\n", line, err));
         }
         write!(f, "{}", output)
     }
