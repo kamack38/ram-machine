@@ -242,3 +242,13 @@ store 1
 
     assert_eq!(RamCode::from_str(code), Ok(expected_code));
 }
+
+#[test]
+fn parse_duplicate_label() {
+    let code = "
+label: read 3
+label: add =5
+";
+
+    assert!(matches!(RamCode::from_str(code), Err(_)));
+}
